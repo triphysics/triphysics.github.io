@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Publications | Tribhuwan Pandey</title>
+  <meta name="description" content="Journal articles, book chapters and patent applications by Tribhuwan Pandey.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html">Tribhuwan Pandey</a>
+      <button class="nav-toggle" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav class="site-nav" id="site-nav" aria-label="Main">
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="projects.html">Projects</a></li>
+          <li><a href="experience.html">Experience</a></li>
+          <li><a href="publications.html" aria-current="page">Publications</a></li>
+          <li><a href="research.html">Research</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="wrap page-head">
+      <h1>Publications</h1>
+      <p id="pub-summary">Peer-reviewed papers, preprints, book chapters and patents, with citation counts from Google Scholar.</p>
+      <ul class="metrics" id="metrics" aria-label="Citation metrics"></ul>
+      <p class="metrics-source" id="metrics-source"></p>
+    </div>
+
+    <div class="wrap">
+      <div class="pub-tools">
+        <label for="pub-search" class="visually-hidden" style="position:absolute;left:-9999px">Search publications</label>
+        <input id="pub-search" class="pub-search" type="search" placeholder="Search by title, author, journal or material" autocomplete="off">
+        <div class="filters" role="group" aria-label="Show">
+          <button type="button" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" data-filter="journal" aria-pressed="false">Journal articles</button>
+          <button type="button" data-filter="preprint" aria-pressed="false">Preprints</button>
+          <button type="button" data-filter="chapter" aria-pressed="false">Book chapters</button>
+          <button type="button" data-filter="patent" aria-pressed="false">Patents</button>
+        </div>
+        <label class="sort" for="pub-sort">Sort
+          <select id="pub-sort">
+            <option value="year">Newest first</option>
+            <option value="cites">Most cited</option>
+          </select>
+        </label>
+        <p class="pub-count" id="pub-count" aria-live="polite"></p>
+      </div>
+
+      <div id="pub-results"></div>
+
+      <noscript>
+        <p class="pub-empty">The publication list needs JavaScript. You can also find all papers on <a href="https://scholar.google.co.in/citations?user=xVojRaYAAAAJ&amp;hl=en">Google Scholar</a>.</p>
+      </noscript>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span>© <span data-year>2026</span> Tribhuwan Pandey, Uppsala</span>
+      <ul>
+        <li><a href="https://github.com/triphysics">GitHub</a></li>
+        <li><a href="https://www.linkedin.com/in/tribhuwan-pandey/">LinkedIn</a></li>
+        <li><a href="https://scholar.google.co.in/citations?user=xVojRaYAAAAJ&amp;hl=en">Google Scholar</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script src="assets/site.js"></script>
+  <script src="assets/publications.js"></script>
+  <script>
+  (function () {
+    var pubs = window.PUBLICATIONS || [];
+    var meta = window.SCHOLAR_META || null;
+    var results = document.getElementById("pub-results");
+    var count = document.getElementById("pub-count");
+    var search = document.getElementById("pub-search");
+    var sortSel = document.getElementById("pub-sort");
+    var buttons = document.querySelectorAll(".filters button");
+    var filter = "all";
+    var ME = "T. Pandey";
+    var groupNames = { preprint: "Preprints", chapter: "Book chapters", patent: "Patents" };
+
+    function fmt(n) { return Number(n).toLocaleString("en-US"); }
+    function esc(s) {
+      return String(s).replace(/[&<>"]/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+      });
+    }
+    function chem(s) { return esc(s).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>"); }
+    function authors(s) { return esc(s).split(ME).join("<strong>" + ME + "</strong>"); }
+
+    function citesHtml(p) {
+      var n = p.cites || 0;
+      var label = n === 1 ? "citation" : "citations";
+      var inner = "<b>" + fmt(n) + "</b>" + label;
+      if (n > 0 && p.citesUrl) {
+        return '<div class="pub-cites"><a href="' + esc(p.citesUrl) + '" title="See citing papers on Google Scholar">' + inner + "</a></div>";
+      }
+      return '<div class="pub-cites zero"><span class="n">' + inner + "</span></div>";
+    }
+
+    function item(p, showYear) {
+      var title = p.url ? '<a href="' + esc(p.url) + '">' + chem(p.title) + "</a>" : chem(p.title);
+      return '<li class="pub"><div>' +
+        '<p class="pub-title">' + title + "</p>" +
+        '<p class="pub-authors">' + authors(p.authors) + "</p>" +
+        '<p class="pub-venue"><em>' + esc(p.journal) + "</em>" + (p.details ? ", " + esc(p.details) : "") +
+        (showYear && p.year && !(p.details || "").match(/\(\d{4}\)/) ? ' <span class="pub-year-inline">(' + p.year + ")</span>" : "") + "</p>" +
+        (p.note ? '<p class="pub-note">' + esc(p.note) + "</p>" : "") +
+        "</div>" + citesHtml(p) + "</li>";
+    }
+
+    function matches(p, q) {
+      if (filter !== "all" && p.type !== filter) return false;
+      if (!q) return true;
+      var hay = (p.title + " " + p.authors + " " + p.journal + " " + (p.details || "") + " " + (p.year || "")).toLowerCase();
+      return q.split(/\s+/).every(function (w) { return hay.indexOf(w) !== -1; });
+    }
+
+    function group(label, list, isYear) { return { label: label, list: list, isYear: isYear }; }
+
+    function render() {
+      var q = search.value.trim().toLowerCase();
+      var shown = pubs.filter(function (p) { return matches(p, q); });
+      var groups = [];
+
+      if (sortSel.value === "cites") {
+        var sorted = shown.slice().sort(function (a, b) { return (b.cites || 0) - (a.cites || 0) || (b.year || 0) - (a.year || 0); });
+        if (sorted.length) groups.push(group("Most cited", sorted, false));
+      } else {
+        var pre = shown.filter(function (p) { return p.type === "preprint"; });
+        if (pre.length) groups.push(group(groupNames.preprint, pre, false));
+        var years = [];
+        shown.forEach(function (p) { if (p.type === "journal" && years.indexOf(p.year) === -1) years.push(p.year); });
+        years.sort(function (a, b) { return b - a; }).forEach(function (y) {
+          groups.push(group(String(y), shown.filter(function (p) { return p.type === "journal" && p.year === y; }), true));
+        });
+        ["chapter", "patent"].forEach(function (t) {
+          var l = shown.filter(function (p) { return p.type === t; });
+          if (l.length) groups.push(group(groupNames[t], l, false));
+        });
+      }
+
+      if (!groups.length) {
+        results.innerHTML = '<p class="pub-empty">No publications match “' + esc(search.value) + '”. Try a shorter search or choose All.</p>';
+      } else {
+        var flat = sortSel.value === "cites";
+        results.innerHTML = groups.map(function (g) {
+          return '<section class="pub-group"><h2' + (g.isYear ? ' class="is-year"' : "") + ">" + esc(g.label) + "</h2>" +
+            '<ol class="pub-list">' + g.list.map(function (p) { return item(p, flat); }).join("") + "</ol></section>";
+        }).join("");
+      }
+      count.textContent = shown.length === pubs.length ? pubs.length + " items" : "Showing " + shown.length + " of " + pubs.length;
+    }
+
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () {
+        filter = b.getAttribute("data-filter");
+        buttons.forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+        render();
+      });
+    });
+    search.addEventListener("input", render);
+    sortSel.addEventListener("change", render);
+
+    var nJ = pubs.filter(function (p) { return p.type === "journal"; }).length;
+    var nP = pubs.filter(function (p) { return p.type === "preprint"; }).length;
+    var nC = pubs.filter(function (p) { return p.type === "chapter"; }).length;
+    var nT = pubs.filter(function (p) { return p.type === "patent"; }).length;
+    document.getElementById("pub-summary").textContent =
+      nJ + " journal articles, " + nP + " preprint, " + nC + " book chapters and " + nT + " patent applications. Click a citation count to see the citing papers.";
+    if (meta) {
+      document.getElementById("metrics").innerHTML =
+        "<li><b>" + fmt(meta.citations) + "</b><span>citations</span></li>" +
+        "<li><b>" + meta.hIndex + "</b><span>h-index</span></li>" +
+        "<li><b>" + meta.i10Index + "</b><span>i10-index</span></li>";
+      document.getElementById("metrics-source").innerHTML =
+        'Source: <a href="' + esc(meta.profile) + '">' + esc(meta.source) + "</a>, " + esc(meta.asOf) + ".";
+    }
+    render();
+  })();
+  </script>
+</body>
+</html>

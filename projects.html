@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projects | Tribhuwan Pandey</title>
+  <meta name="description" content="Data science and machine-learning projects by Tribhuwan Pandey: failure prediction from sensor data, trustworthy ML models, LLM/RAG tools, automated pipelines with QC, and open-source software.">
+  <meta property="og:title" content="Projects | Tribhuwan Pandey">
+  <meta property="og:image" content="https://triphysics.github.io/assets/og-image.jpg">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html">Tribhuwan Pandey</a>
+      <button class="nav-toggle" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav class="site-nav" id="site-nav" aria-label="Main">
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="projects.html" aria-current="page">Projects</a></li>
+          <li><a href="experience.html">Experience</a></li>
+          <li><a href="publications.html">Publications</a></li>
+          <li><a href="research.html">Research</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="wrap page-head">
+      <h1>Projects</h1>
+      <p>Each project follows the same arc: a problem someone needed solved, the data and method I used, and what came out of it. Company work is described in general terms only.</p>
+    </div>
+
+    <div class="wrap">
+      <article class="case" id="failure-prediction">
+        <div class="case-meta">
+          <strong>Sandvik Coromant</strong>
+          Performance Testing Grades team<br>
+          Stockholm, 2026 to now
+          <br><span class="status">In progress</span>
+        </div>
+        <div>
+          <h2>Failure detection and prediction from test-rig sensor data</h2>
+          <dl>
+            <dt>Problem</dt>
+            <dd>Performance tests of cutting-tool grades produce continuous instrument and sensor data. Failures need to be detected reliably, and ideally predicted before they happen.</dd>
+            <dt>Approach</dt>
+            <dd>Machine-learning and time-series models for failure detection and prediction, developed in Databricks. Alongside the modelling, I help integrate equipment, sensors and databases so data is collected in a structured way from the start.</dd>
+            <dt>Outcome</dt>
+            <dd>Analyses and visualisations of test data that I present to the engineers who run the tests. The work is ongoing, and the code is company property.</dd>
+          </dl>
+          <ul class="tags"><li>Python</li><li>Databricks</li><li>Time series</li><li>Anomaly detection</li><li>Sensor data</li></ul>
+        </div>
+      </article>
+
+      <article class="case" id="trustworthy-ml">
+        <div class="case-meta">
+          <strong>University of Antwerp</strong>
+          Visiting researcher<br>
+          2024 to 2026
+        </div>
+        <div>
+          <h2>Machine-learning prediction models that know their limits</h2>
+          <dl>
+            <dt>Problem</dt>
+            <dd>Prediction models trained on large scientific datasets can look accurate on average while failing badly on the cases that matter most.</dd>
+            <dt>Approach</dt>
+            <dd>End-to-end pipelines covering data generation, cleaning, feature preparation, training and evaluation. Models were validated against reference data, and I systematically mapped where their predictions could not be trusted.</dd>
+            <dt>Outcome</dt>
+            <dd>Validated models, plus a clear account of their reliable range, so collaborators knew when to use a prediction and when to fall back on a direct calculation.</dd>
+          </dl>
+          <ul class="tags"><li>Python</li><li>scikit-learn</li><li>PyTorch</li><li>Model validation</li><li>Uncertainty</li></ul>
+        </div>
+      </article>
+
+      <article class="case" id="llm-rag">
+        <div class="case-meta">
+          <strong>University of Antwerp</strong>
+          Visiting researcher<br>
+          2024 to 2026
+        </div>
+        <div>
+          <h2>LLM and retrieval-augmented-generation tools for knowledge-intensive analysis</h2>
+          <dl>
+            <dt>Problem</dt>
+            <dd>Some analysis steps depended on experts searching through literature and documentation by hand, which was slow and hard to repeat.</dd>
+            <dt>Approach</dt>
+            <dd>Tools that combine large language models with retrieval over the relevant documents, so answers are grounded in sources rather than generated from memory.</dd>
+            <dt>Outcome</dt>
+            <dd>Manual, knowledge-intensive steps in the analysis workflow were automated.</dd>
+          </dl>
+          <ul class="tags"><li>Python</li><li>LLMs</li><li>RAG</li><li>Automation</li></ul>
+        </div>
+      </article>
+
+      <article class="case" id="pipelines">
+        <div class="case-meta">
+          <strong>University of Antwerp</strong>
+          Senior researcher<br>
+          2019 to 2023
+        </div>
+        <div>
+          <h2>High-throughput data pipelines with built-in quality control</h2>
+          <dl>
+            <dt>Problem</dt>
+            <dd>Screening hundreds of candidate materials by hand is slow and error-prone, and silent failures in individual runs can corrupt a whole dataset.</dd>
+            <dt>Approach</dt>
+            <dd>Automated pipelines that generate, integrate and check data across hundreds of cases, running unattended on supercomputers. Quality-control steps flag anomalies, outliers and failed runs, and every result carries structured metadata, following FAIR principles.</dd>
+            <dt>Outcome</dt>
+            <dd>Reusable, traceable datasets at a scale that justified a Flemish Tier-1 HPC allocation of about 35 million CPU-hours.</dd>
+          </dl>
+          <ul class="tags"><li>Python</li><li>AiiDA</li><li>Atomate2</li><li>Bash</li><li>HPC</li><li>Data QC</li><li>FAIR data</li></ul>
+        </div>
+      </article>
+
+      <article class="case" id="mx-phon">
+        <div class="case-meta">
+          <strong>Open source</strong>
+          University of Antwerp<br>
+          <span class="status">Live</span>
+        </div>
+        <div>
+          <h2>MX-PHon: a curated public database with a web front end</h2>
+          <dl>
+            <dt>Problem</dt>
+            <dd>Researchers working on MXenes, a large family of 2D materials, had no single place to find consistent structural and vibrational data.</dd>
+            <dt>Approach</dt>
+            <dd>I curated crystal structures and phonon dispersions into one dataset and published it with a searchable web interface. Users can browse by metal, carbide or nitride, and surface group, or search for a compound directly.</dd>
+            <dt>Outcome</dt>
+            <dd>A public, openly hosted dataset that anyone can explore without installing anything.</dd>
+          </dl>
+          <ul class="tags"><li>Data curation</li><li>Web front end</li><li>GitHub Pages</li><li>Open data</li></ul>
+          <div class="links">
+            <a class="btn btn-ink" href="https://triphysics.github.io/phonon-maxene-db">Open the database</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="case" id="packages">
+        <div class="case-meta">
+          <strong>Open source</strong>
+          University of Antwerp<br>
+          2019 to 2023
+        </div>
+        <div>
+          <h2>PLATO and PyFlex: documented Python packages used by other researchers</h2>
+          <dl>
+            <dt>Problem</dt>
+            <dd>Analyses that lived in personal scripts could not be reused or checked by anyone else.</dd>
+            <dt>Approach</dt>
+            <dd>I turned them into two packages: PLATO, a Python analysis toolkit, and PyFlex, a modelling framework. I designed, documented, released and maintained both.</dd>
+            <dt>Outcome</dt>
+            <dd>Tools that other researchers use in their own work, with documentation they can follow without me.</dd>
+          </dl>
+          <ul class="tags"><li>Python</li><li>Package design</li><li>Documentation</li><li>Git/GitHub</li></ul>
+          <div class="links">
+            <a class="btn btn-line" href="https://github.com/triphysics">Code on GitHub</a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <section class="contact-band" aria-labelledby="contact-title">
+    <div class="wrap">
+      <div>
+        <h2 id="contact-title">Want to talk about a project?</h2>
+        <p>I'm happy to go into more detail on methods, results and what I'd do differently.</p>
+      </div>
+      <ul class="actions">
+        <li><a class="btn btn-ink" data-email data-keep-label data-user="trib.pandey20" data-domain="gmail.com" href="#">Email me</a></li>
+        <li><a class="btn btn-line" data-cv hidden href="cv/Tribhuwan_Pandey_CV.pdf">Download CV</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span>© <span data-year>2026</span> Tribhuwan Pandey, Uppsala</span>
+      <ul>
+        <li><a href="https://github.com/triphysics">GitHub</a></li>
+        <li><a href="https://www.linkedin.com/in/tribhuwan-pandey/">LinkedIn</a></li>
+        <li><a href="https://scholar.google.co.in/citations?user=xVojRaYAAAAJ&amp;hl=en">Google Scholar</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script src="assets/site.js"></script>
+</body>
+</html>

@@ -426,3 +426,14 @@ mark { background: #fbe9bf; color: inherit; padding: 0 1px; }
 .post-note { margin-top: 3rem; padding: 1.1rem 1.25rem; border-left: 3px solid var(--signal); background: var(--surface); border-radius: 0 6px 6px 0; font-family: var(--sans); font-size: 0.95rem; line-height: 1.6; color: #36405a; }
 .post-note p { margin: 0; }
 .post-note strong { color: var(--ink); font-weight: 600; }
+.post-body code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; background: #e9ecf1; padding: 0.1em 0.35em; border-radius: 4px; }
+.post-code { margin: 1.5rem 0; padding: 1rem 1.25rem; background: var(--ink); color: #e6e9f2; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.55; }
+.post-code code { background: none; padding: 0; font-size: inherit; color: inherit; }
+.post-table { margin: 1.5rem 0 2rem; overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+.post-table table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 0.9rem; line-height: 1.45; }
+.post-table th, .post-table td { text-align: left; vertical-align: top; padding: 0.65rem 0.8rem; border-bottom: 1px solid var(--rule); }
+.post-table th { font-weight: 600; color: var(--ink); background: #eef1f6; }
+.post-table tr:last-child td { border-bottom: 0; }
+.post-checklist { list-style: none; padding-left: 0 !important; }
+.post-checklist li { position: relative; padding-left: 1.9rem; }
+.post-checklist li::before { content: ""; position: absolute; left: 0; top: 0.3em; width: 1rem; height: 1rem; border: 1.5px solid var(--muted); border-radius: 3px; }

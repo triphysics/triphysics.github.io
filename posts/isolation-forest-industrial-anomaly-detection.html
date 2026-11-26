@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Isolation forest for industrial anomaly detection | Tribhuwan Pandey</title>
+  <meta name="description" content="How isolation forest finds anomalies without labels, why it suits industrial sensor data, where it is used, and a tested Python example on simulated pump faults.">
+  <meta name="author" content="Tribhuwan Pandey">
+  <meta property="og:title" content="Isolation forest for industrial anomaly detection">
+  <meta property="og:description" content="A practical explainer of isolation forest for predictive maintenance and process monitoring, with published industry cases, a runnable Python example and a deployment checklist.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://triphysics.github.io/posts/isolation-forest-industrial-anomaly-detection.html">
+  <meta property="og:image" content="https://triphysics.github.io/assets/og-image.jpg">
+  <meta property="article:published_time" content="2026-10-04">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://triphysics.github.io/posts/isolation-forest-industrial-anomaly-detection.html">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Isolation forest for industrial anomaly detection",
+    "datePublished": "2026-10-04",
+    "author": { "@type": "Person", "name": "Tribhuwan Pandey", "url": "https://triphysics.github.io/" },
+    "mainEntityOfPage": "https://triphysics.github.io/posts/isolation-forest-industrial-anomaly-detection.html"
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../index.html">Tribhuwan Pandey</a>
+      <button class="nav-toggle" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav class="site-nav" id="site-nav" aria-label="Main">
+        <ul>
+          <li><a href="../index.html">Home</a></li>
+          <li><a href="../projects.html">Projects</a></li>
+          <li><a href="../experience.html">Experience</a></li>
+          <li><a href="../publications.html">Publications</a></li>
+          <li><a href="../research.html">Research</a></li>
+          <li><a href="../posts.html" aria-current="page">Posts</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <article class="wrap post">
+      <p class="post-back"><a href="../posts.html">← All posts</a></p>
+
+      <header class="post-header">
+        <h1>Isolation forest for industrial anomaly detection</h1>
+        <p class="post-meta">Tribhuwan Pandey · <time datetime="2026-10-04">4 October 2026</time> · 13 min read</p>
+      </header>
+
+      <div class="post-body">
+        <p class="lede">Isolation forest is often the first anomaly detector an industrial data team should try. It needs no labelled failures, it trains in seconds, and it ranks every reading by how unusual it is.</p>
+
+        <p>That matters because labels are the scarcest thing on a plant floor. A well-run compressor, pump or injection mould may fail a handful of times in its life, and each failure looks a little different. You cannot train a classifier on examples you do not have. What you do have is months of sensor data from normal running, with the odd strange episode buried inside it.</p>
+
+        <p>Most classic methods handle this by modelling "normal" first (a distribution, a density, a boundary) and flagging whatever falls outside. Isolation forest turns the problem around. It does not try to describe normal at all. It asks a simpler question: how easy is it to cut this one point away from everyone else?</p>
+
+        <p>This post covers how the algorithm works, why it suits industrial data, where it is being used, a working Python example on simulated machine data, and the traps that catch teams when they put it into production.</p>
+
+        <nav class="post-toc" aria-label="Contents">
+          <p>Contents</p>
+          <ol>
+            <li><a href="#core-idea">The core idea: anomalies are few and different</a></li>
+            <li><a href="#why-industry">Why it fits industrial data</a></li>
+            <li><a href="#where-used">Where it is used in industry</a></li>
+            <li><a href="#hands-on">Hands-on: catching pump faults in Python</a></li>
+            <li><a href="#pitfalls">Pitfalls and tuning in production</a></li>
+            <li><a href="#alternatives">When to reach for something else</a></li>
+            <li><a href="#checklist">Takeaways and a deployment checklist</a></li>
+          </ol>
+        </nav>
+
+        <h2 id="core-idea">The core idea: anomalies are few and different</h2>
+
+        <p>An anomaly is easy to isolate because it is rare and sits far from the crowd. A normal point is hard to isolate because it is surrounded by similar neighbours. That one observation is the whole algorithm.</p>
+
+        <p><a href="https://en.wikipedia.org/wiki/Isolation_forest">Isolation forest</a> was introduced by Fei Tony Liu, Kai Ming Ting and Zhi-Hua Zhou at the IEEE ICDM conference in 2008. Here is how it works:</p>
+
+        <ol>
+          <li>Draw a small random subsample of the data. The paper's default is 256 points.</li>
+          <li>Build an isolation tree. At each node, pick a random feature and a random split value between that feature's min and max. Keep splitting until every point sits alone or a depth limit is hit.</li>
+          <li>Record the <strong>path length</strong> for each point: the number of splits needed to isolate it.</li>
+          <li>Repeat with a fresh subsample to build many trees (100 by default) and average each point's path length.</li>
+          <li>Short average path length means anomaly. Long average path length means normal.</li>
+        </ol>
+
+        <figure class="post-figure">
+          <svg xmlns="http://www.w3.org/2000/svg" font-family="Schibsted Grotesk, Helvetica Neue, Arial, sans-serif" viewBox="0 0 760 414" role="img" aria-label="An outlier is cut off in 2 random splits; a normal point needs 8" font-size="13"><text x="24" y="28" font-size="15" font-weight="600" fill="#18213a">An outlier is cut off in 2 random splits; a normal point needs 8</text><text x="24" y="50" font-size="11.5" fill="#5a6377">Dashed lines are random cuts. The shaded box is the region that finally holds only the highlighted point.</text><g><text x="24" y="80" font-weight="600" fill="#18213a">Point inside the crowd</text><rect x="24" y="92" width="340" height="260" rx="8" fill="none" stroke="#9aa3b5" stroke-width="1.25"></rect><rect x="154" y="212" width="45" height="40" fill="#2b4fb8" fill-opacity="0.12"></rect><line x1="134" y1="92" x2="134" y2="352" stroke="#e3a92b" stroke-width="1.75" stroke-dasharray="5 4"></line><line x1="134" y1="282" x2="364" y2="282" stroke="#e3a92b" stroke-width="1.75" stroke-dasharray="5 4"></line><line x1="224" y1="92" x2="224" y2="282" stroke="#e3a92b" stroke-width="1.75" stroke-dasharray="5 4"></line><line x1="134" y1="187" x2="224" y2="187" stroke="#e3a92b" stroke-width="1.75" stroke-dasharray="5 4"></line><line x1="154" y1="187" x2="154" y2="282" stroke="#e3a92b" stroke-width="1.75" stroke-dasharray="5 4"></line><line x1="154" y1="252" x2="224" y2="252" stroke="#e3a92b" stroke-width="1.75" stroke-dasharray="5 4"></line><line x1="199" y1="187" x2="199" y2="252" stroke="#e3a92b" stroke-width="1.75" stroke-dasharray="5 4"></line><line x1="154" y1="212" x2="199" y2="212" stroke="#e3a92b" stroke-width="1.75" stroke-dasharray="5 4"></line><circle cx="119" cy="212" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="129" cy="257" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="142" cy="187" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="146" cy="292" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="164" cy="172" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="174" cy="302" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="189" cy="192" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="209" cy="267" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="214" cy="222" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="224" cy="177" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="234" cy="247" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="239" cy="292" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="124" cy="232" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="149" cy="202" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="204" cy="204" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="159" cy="267" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="184" cy="277" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="139" cy="272" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="219" cy="200" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="194" cy="162" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="159" cy="317" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="249" cy="212" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="109" cy="282" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="229" cy="322" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="176" cy="232" r="6" fill="#2b4fb8"></circle><text x="24" y="376" font-weight="600" fill="#18213a">Normal point: 8 cuts to isolate</text><text x="24" y="394" font-size="11.5" fill="#5a6377">Its neighbours keep landing on the same side of each cut</text></g><g><text x="396" y="80" font-weight="600" fill="#18213a">Point far from the crowd</text><rect x="396" y="92" width="340" height="260" rx="8" fill="none" stroke="#9aa3b5" stroke-width="1.25"></rect><rect x="651" y="92" width="85" height="85" fill="#2b4fb8" fill-opacity="0.12"></rect><line x1="651" y1="92" x2="651" y2="352" stroke="#e3a92b" stroke-width="1.75" stroke-dasharray="5 4"></line><line x1="651" y1="177" x2="736" y2="177" stroke="#e3a92b" stroke-width="1.75" stroke-dasharray="5 4"></line><circle cx="491" cy="212" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="501" cy="257" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="514" cy="187" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="518" cy="292" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="536" cy="172" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="546" cy="302" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="561" cy="192" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="581" cy="267" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="586" cy="222" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="596" cy="177" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="606" cy="247" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="611" cy="292" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="496" cy="232" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="521" cy="202" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="576" cy="204" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="531" cy="267" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="556" cy="277" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="511" cy="272" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="591" cy="200" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="566" cy="162" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="531" cy="317" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="621" cy="212" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="481" cy="282" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="601" cy="322" r="3.5" fill="#9aa3b5" fill-opacity="0.8"></circle><circle cx="696" cy="132" r="6" fill="#2b4fb8"></circle><text x="396" y="376" font-weight="600" fill="#18213a">Anomaly: 2 cuts to isolate</text><text x="396" y="394" font-size="11.5" fill="#5a6377">Short path length means a high anomaly score</text></g></svg>
+          <figcaption>Isolating a normal point versus an anomaly with random cuts. Averaged over 100 or more trees, these path lengths become a stable ranking of how unusual each point is.</figcaption>
+        </figure>
+
+        <p>To make scores comparable across datasets, the average path length <i>E</i>[<i>h</i>(<i>x</i>)] is normalised by <i>c</i>(<i>n</i>), the expected path length of an unsuccessful search in a binary search tree of <i>n</i> points:</p>
+
+        <div class="post-math">
+          <math display="block">
+            <mrow>
+              <mi>s</mi><mo stretchy="false">(</mo><mi>x</mi><mo>,</mo><mi>n</mi><mo stretchy="false">)</mo><mo>=</mo>
+              <msup>
+                <mn>2</mn>
+                <mrow><mo>−</mo><mfrac><mrow><mi>E</mi><mo stretchy="false">[</mo><mi>h</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">]</mo></mrow><mrow><mi>c</mi><mo stretchy="false">(</mo><mi>n</mi><mo stretchy="false">)</mo></mrow></mfrac></mrow>
+              </msup>
+              <mo>,</mo><mspace width="1.5em"/>
+              <mi>c</mi><mo stretchy="false">(</mo><mi>n</mi><mo stretchy="false">)</mo><mo>=</mo>
+              <mn>2</mn><mi>H</mi><mo stretchy="false">(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo><mo>−</mo>
+              <mfrac><mrow><mn>2</mn><mo stretchy="false">(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><mi>n</mi></mfrac>
+            </mrow>
+          </math>
+        </div>
+
+        <p>Here <i>H</i>(<i>i</i>) is the harmonic number, roughly ln(<i>i</i>) + 0.5772. A score close to 1 marks a clear anomaly. Scores well below 0.5 are safely normal. If every point scores near 0.5, the data has no distinct anomalies.</p>
+
+        <p>A quick feel for the numbers: on 256 normal points in 2D, a point at the centre of the cloud needs about 12 cuts to isolate, while a point far outside needs about 5.</p>
+
+        <h2 id="why-industry">Why it fits industrial data</h2>
+
+        <p>Isolation forest suits plant and machine data because it is unsupervised, cheap to run and indifferent to how the data is distributed. In more detail:</p>
+
+        <ul>
+          <li><strong>No labels needed.</strong> It learns from historical running data as it is. A few faults hidden in the training set are fine, because the model is built to isolate rare points, not to fit them.</li>
+          <li><strong>Linear time, low memory.</strong> Each tree only sees a small subsample, so training cost barely grows with data volume. The original paper highlights linear time complexity with a low constant and a low memory requirement. A forest of 100 trees on 256-point samples fits comfortably on an edge gateway.</li>
+          <li><strong>No distance or density model.</strong> It does not assume Gaussian data, and it never computes pairwise distances. That makes it robust to the skewed, multi-modal distributions that real processes produce (start-up, steady state, shutdown).</li>
+          <li><strong>Copes with many sensors.</strong> Random feature selection at each split means dozens or hundreds of tags are workable, though irrelevant features do dilute the signal (more on that below).</li>
+          <li><strong>Gives a ranking, not just a flag.</strong> The continuous score lets engineers review the top 20 most unusual hours each morning instead of chasing a binary alarm.</li>
+          <li><strong>Easy to get.</strong> It ships in <a href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html">scikit-learn</a>, H2O, Spark (through LinkedIn's open-source library) and most cloud ML platforms, so prototypes can go to production on familiar tooling.</li>
+        </ul>
+
+        <h2 id="where-used">Where it is used in industry</h2>
+
+        <p>Isolation forest shows up wherever there is plenty of sensor or process data and very few labelled failures. Predictive maintenance, process quality and energy assets are the most common. These published cases show the range:</p>
+
+        <div class="post-table">
+          <table>
+            <thead>
+              <tr><th>Sector</th><th>What was monitored</th><th>How isolation forest was used</th><th>Reported outcome</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Plastics manufacturing</td><td>Injection moulds at <a href="https://ria.ua.pt/bitstream/10773/41334/1/1-s2.0-S1877050922023808-main.pdf">OLI, Portugal</a></td><td>One model per process variable (cushion position, cycle time, injection start) on 5-minute windows. Each anomaly fed a fault tree that triggered maintenance</td><td>Estimated 63% saving vs corrective maintenance and 27% vs optimised preventive maintenance</td></tr>
+              <tr><td>Wind energy</td><td><a href="https://mdpi.com/1996-1073/14/20/6601">Pitch systems on 15 turbines</a>, 10-minute SCADA data</td><td>The share of anomalous readings per day, week or month was tracked as a health indicator</td><td>Abnormal activity flagged roughly 12 to 18 months before pitch failure</td></tr>
+              <tr><td>Wind energy</td><td><a href="https://doi.org/10.3390/en13195152">Gearbox SCADA data</a></td><td>Compared against one-class SVM and elliptic envelope on a healthy year vs a faulty year</td><td>Needed only two months of data per turbine</td></tr>
+              <tr><td>Semiconductors</td><td><a href="https://eld.bl.uk/catalog/100053848837_0x000001">Plasma etch optical emission spectra</a></td><td>Variable selection to reduce the high-dimensional OES data, then isolation forest for detection and diagnosis</td><td>Basis for later interpretable FDC work on CVD processes</td></tr>
+              <tr><td>Semiconductors</td><td><a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8200057/">Diffusion process sensor signals</a></td><td>Signals cut into segments, features extracted, isolation forest as the one-class detector</td><td>Beat the paper's baseline methods</td></tr>
+              <tr><td>Automotive</td><td><a href="https://ieomsociety.org/proceedings/brazil2025/75.pdf">Slat conveyors on an assembly line</a></td><td>EWMA control charts screened the IoT data, then isolation forest scored the flagged points</td><td>Used because no labelled failure data existed</td></tr>
+              <tr><td>Particle accelerators</td><td><a href="https://arxiv.org/pdf/2603.20335">C70XP cyclotron at ARRONAX</a></td><td>An autoencoder compressed sensor windows, then isolation forest scored the result</td><td>F1 rose from 0.41 (plain isolation forest) to 0.87 (hybrid)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Two patterns repeat across these cases. First, isolation forest is rarely the whole system: it sits behind feature engineering (windows, statistics, autoencoders) and in front of a decision layer (fault trees, alarm thresholds, a human reviewer). Second, the most useful output is often a trend in the anomaly rate over weeks, not an individual flag.</p>
+
+        <p>Outside the factory, the same idea runs at very large scale. LinkedIn <a href="https://engineering.linkedin.com/blog/2019/isolation-forest">open-sourced its Spark implementation</a> in 2019 for anti-abuse work. AWS built its <a href="https://docs.aws.amazon.com/sagemaker/latest/dg/rcf_how-it-works.html">Random Cut Forest</a>, a streaming variant, into SageMaker and Kinesis.</p>
+
+        <h2 id="hands-on">Hands-on: catching pump faults in Python</h2>
+
+        <p>With one simple pre-processing step, plain isolation forest catches 91% of a slow bearing-wear drift. On raw data it catches only 14%. The example below uses simulated data so you can run it and see why.</p>
+
+        <p>The setup is a pump logging vibration, bearing temperature, discharge pressure and motor current once a minute for 60 days. Every signal rises and falls with a daily load cycle. Three faults are injected into the last 15 days:</p>
+
+        <ul>
+          <li><strong>Bearing wear:</strong> vibration and temperature drift slowly upward over two days.</li>
+          <li><strong>Cavitation:</strong> discharge pressure drops and vibration turns noisy for three hours.</li>
+          <li><strong>Current up, pressure normal:</strong> the motor draws 8 A more than it should for six hours, while every other sensor looks normal.</li>
+        </ul>
+
+        <p>The model trains on the first 45 days and scores 15-minute windows from the last 15. The alert threshold is the 99.5th percentile of the training scores, so it is set without ever seeing a fault. The script tries three versions:</p>
+
+        <pre class="post-code"><code>import numpy as np
+import pandas as pd
+from sklearn.ensemble import IsolationForest
+from sklearn.linear_model import LinearRegression
+
+rng = np.random.default_rng(42)
+
+# --- 1. Simulate 60 days of 1-minute pump data with a daily load cycle ---
+n = 60 * 24 * 60
+t = pd.date_range("2026-01-01", periods=n, freq="min")
+load = 0.7 + 0.2 * np.sin(2 * np.pi * np.arange(n) / (24 * 60))
+
+df = pd.DataFrame({
+    "load": load,  # known operating condition from the control system
+    "vibration_mm_s": 2.0 + 1.5 * load + rng.normal(0, 0.15, n),
+    "bearing_temp_c": 45 + 15 * load + rng.normal(0, 0.8, n),
+    "discharge_bar": 6.0 + 2.0 * load + rng.normal(0, 0.10, n),
+    "motor_current_a": 30 + 20 * load + rng.normal(0, 0.6, n),
+}, index=t)
+sensors = ["vibration_mm_s", "bearing_temp_c", "discharge_bar", "motor_current_a"]
+
+# --- 2. Inject three faults into the last 15 days ---
+faults = {
+    "Bearing wear (2-day drift)": slice("2026-02-18", "2026-02-19 23:59"),
+    "Cavitation (3 h)": slice("2026-02-24 10:00", "2026-02-24 12:59"),
+    "Current up, pressure normal (6 h)": slice("2026-02-27 02:00", "2026-02-27 07:59"),
+}
+s = faults["Bearing wear (2-day drift)"]
+df.loc[s, "vibration_mm_s"] += np.linspace(0, 1.5, len(df.loc[s]))
+df.loc[s, "bearing_temp_c"] += np.linspace(0, 6, len(df.loc[s]))
+s = faults["Cavitation (3 h)"]
+df.loc[s, "discharge_bar"] -= 1.2
+df.loc[s, "vibration_mm_s"] += rng.normal(0, 0.8, len(df.loc[s]))
+df.loc[faults["Current up, pressure normal (6 h)"], "motor_current_a"] += 8
+
+label = pd.Series(0, index=t)
+for s in faults.values():
+    label[s] = 1
+y = label.resample("15min").max()
+
+TRAIN, TEST = slice(None, "2026-02-14 23:59"), slice("2026-02-15", None)
+
+
+def fit_and_alert(feats, pct=99.5):
+    """Train on the first 45 days; alert when the score beats the training percentile."""
+    model = IsolationForest(n_estimators=200, max_samples=256, random_state=0)
+    model.fit(feats.loc[TRAIN])
+    # score_samples: lower = more anomalous, so flip the sign
+    threshold = np.percentile(-model.score_samples(feats.loc[TRAIN]), pct)
+    score = pd.Series(-model.score_samples(feats.loc[TEST]), index=feats.loc[TEST].index)
+    return score &gt; threshold
+
+
+def report(name, alert):
+    healthy = y.loc[TEST] == 0
+    print(f"\n{name}\n  false alarms: {int((alert &amp; healthy).sum())} of {int(healthy.sum())} healthy windows")
+    for fault, s in faults.items():
+        a = alert.loc[s]
+        when = f"first alert after {a.idxmax() - a.index[0]}" if a.any() else "missed"
+        print(f"  {fault:35s} {int(a.sum()):3d}/{len(a)} windows, {when}")
+
+
+# --- 3. Version A: isolation forest on raw 15-minute statistics ---
+w = df[sensors].resample("15min")
+raw = pd.concat([w.mean().add_suffix("_mean"), w.std().add_suffix("_std")], axis=1)
+report("A. Raw sensor windows", fit_and_alert(raw))
+
+# --- 4. Version B: remove the load effect, then model the residuals ---
+resid = pd.DataFrame(index=df.index)
+for col in sensors:
+    reg = LinearRegression().fit(df.loc[TRAIN, ["load"]], df.loc[TRAIN, col])
+    resid[col] = df[col] - reg.predict(df[["load"]])
+resid_15 = resid.resample("15min").mean()
+alert_b = fit_and_alert(resid_15)
+report("B. Load-corrected residuals", alert_b)
+
+# --- 5. Version C: B plus a per-sensor guard rail for out-of-range values ---
+mu, sd = resid_15.loc[TRAIN].mean(), resid_15.loc[TRAIN].std()
+guard = ((resid_15.loc[TEST] - mu).abs() / sd &gt; 6).any(axis=1)
+report("C. Residuals + 6-sigma guard rail", alert_b | guard)</code></pre>
+
+        <p>The script runs in about 1.5 seconds on a laptop (scikit-learn 1.9.1). The results, as fault windows caught out of the total, with false alarms over 1,212 healthy windows:</p>
+
+        <div class="post-table">
+          <table>
+            <thead>
+              <tr><th>Version</th><th>Bearing wear (192 windows)</th><th>Cavitation (12)</th><th>Current up (24)</th><th>False alarms</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>A. Raw sensor windows</td><td>26 (first alert after 6 h 15 min)</td><td>8</td><td>0, missed</td><td>6</td></tr>
+              <tr><td>B. Load-corrected residuals</td><td>175 (first alert after 3 h 45 min)</td><td>7</td><td>3</td><td>3</td></tr>
+              <tr><td>C. Residuals + 6-sigma guard rail</td><td>175 (first alert after 3 h 45 min)</td><td>12</td><td>24</td><td>3</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Three lessons come out of this:</p>
+
+        <ol>
+          <li><strong>Remove the operating condition first.</strong> On raw data, the daily load swing is the biggest source of variation. A bearing running 1 mm/s hotter at low load still looks like normal high-load running. Regressing each sensor on load and modelling the residuals lifts wear detection from 14% to 91% and halves false alarms.</li>
+          <li><strong>Isolation forest saturates outside the training range.</strong> This is the surprising one. The current fault is about 50 standard deviations out, yet version B scores it like an ordinary point. A split can only fall between the training minimum and maximum. So a value of +8 A lands in the same leaf as the most extreme training point, around +0.6 A. In this model, a window with +8 A and one with +0.5 A get exactly the same score (0.528, below the 0.616 threshold). When only one sensor is off, the other features keep the path long.</li>
+          <li><strong>Pair the forest with simple guard rails.</strong> A per-sensor limit on the residuals catches the large single-signal faults that the forest misses. The forest then covers the subtle, multi-signal patterns that limits cannot see. Combined, all three faults are caught with no extra false alarms.</li>
+        </ol>
+
+        <h2 id="pitfalls">Pitfalls and tuning in production</h2>
+
+        <p>Most isolation forest projects that disappoint fail on data preparation and alarm design, not on the algorithm. These are the traps to plan for:</p>
+
+        <ul>
+          <li><strong>Treating <code>contamination</code> as a tuning knob.</strong> In scikit-learn it only sets the cut-off that <code>predict()</code> uses. It does not change the trees. Set the threshold yourself from the score distribution on known-good data, as the example does, and tie it to an alarm budget the operators accept (for example, no more than two false alerts per shift).</li>
+          <li><strong>Ignoring operating modes.</strong> Start-up, shutdown, cleaning cycles and product changeovers all look "rare". Either filter them out, model the residual after removing the operating condition, or train one model per mode.</li>
+          <li><strong>Feeding raw time series.</strong> Isolation forest treats each row as independent. It has no idea that a value is rising. Give it windows with means, standard deviations, slopes, ranges or spectral bands, or residuals from a forecast model.</li>
+          <li><strong>Too many weak features.</strong> Every split picks a feature at random, so ten irrelevant tags dilute the one that matters. Start with a small set chosen with the process engineers, and add more only when they earn their place.</li>
+          <li><strong>Expecting it to extrapolate.</strong> As the example showed, scores saturate beyond the training range. Keep hard limits and rate-of-change checks alongside the model.</li>
+          <li><strong>Training on a contaminated baseline.</strong> A few faults in training data are fine. A long hidden degradation is not: the model learns it as normal. Check training periods against maintenance logs.</li>
+          <li><strong>Concept drift.</strong> Seasons, recalibrations, new raw materials and replaced parts all shift the baseline. Retrain on a rolling window and monitor the alert rate as a health metric for the model itself.</li>
+          <li><strong>Alerting on single windows.</strong> One high score is usually noise. Alert when several consecutive windows exceed the threshold, or track the anomaly rate per day or week. The wind turbine study above found weekly rates removed most of the noise.</li>
+          <li><strong>No explanation.</strong> Operators will not act on "score 0.71". Report which sensors drove the score. SHAP's TreeExplainer works with scikit-learn's isolation forest, and <a href="https://arxiv.org/abs/2007.11117v2">DIFFI</a> and <a href="https://arxiv.org/pdf/2405.01158v4">ExIFFI</a> are feature-importance methods built for isolation forests. A simple alternative is to show each sensor's residual next to the alert.</li>
+        </ul>
+
+        <h2 id="alternatives">When to reach for something else</h2>
+
+        <p>Isolation forest is a strong default for tabular, windowed sensor data. It is not the best tool for every shape of problem:</p>
+
+        <div class="post-table">
+          <table>
+            <thead>
+              <tr><th>Method</th><th>Pick it when</th><th>Trade-off vs isolation forest</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><a href="https://arxiv.org/abs/1811.02141">Extended isolation forest</a></td><td>Normal data forms diagonal or curved clusters, and you see odd "ghost" regions in score maps</td><td>Uses random-slope splits instead of axis-parallel ones, which removes rectangular artefacts. The authors report similar speed</td></tr>
+              <tr><td><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/rcf_how-it-works.html">Random Cut Forest</a></td><td>Data arrives as a stream and the model must update continuously</td><td>Picks split dimensions in proportion to their range and supports incremental updates. Available as a managed AWS service</td></tr>
+              <tr><td>Local outlier factor</td><td>Anomalies are points in a sparse gap between dense clusters</td><td>Density-based, so it catches local outliers well, but it scales poorly on large datasets</td></tr>
+              <tr><td>One-class SVM</td><td>Small, clean, low-dimensional datasets with a smooth boundary</td><td>Sensitive to kernel and scaling choices, and slow on large data</td></tr>
+              <tr><td>Autoencoders and LSTM models</td><td>Raw waveforms, images or long sequences where the temporal pattern is the signal</td><td>Need much more data, tuning and compute. Often used as feature extractors in front of an isolation forest</td></tr>
+              <tr><td>Statistical process control (EWMA, Hotelling T²)</td><td>A few well-understood variables with stable, roughly Gaussian behaviour</td><td>Simple to explain to quality teams. Misses complex multivariate patterns</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>In practice, many teams benchmark isolation forest against one or two of these on a labelled sample of past incidents, then keep the simplest model that meets the alarm budget.</p>
+
+        <h2 id="checklist">Takeaways and a deployment checklist</h2>
+
+        <p>Isolation forest earns its place in industry because it turns months of unlabelled sensor history into a ranked list of "things worth a look", cheaply and quickly. The algorithm is the easy part. The value comes from the features you give it, the threshold you choose, and the guard rails and explanations around it.</p>
+
+        <p>Before you put one into production:</p>
+
+        <ul class="post-checklist">
+          <li>Agree the target faults and an alarm budget with the operations team</li>
+          <li>Pick a training period that maintenance logs confirm was healthy</li>
+          <li>Remove or model operating conditions (load, speed, product, mode)</li>
+          <li>Build window features: means, spreads, slopes, ratios between related signals</li>
+          <li>Keep the feature set small and engineer-approved</li>
+          <li>Set the threshold from scores on known-good data, not from <code>contamination</code></li>
+          <li>Add hard limits and rate-of-change checks for out-of-range values</li>
+          <li>Require persistence (several windows) or track the anomaly rate before alerting</li>
+          <li>Show the top contributing sensors with every alert</li>
+          <li>Back-test on past incidents and measure lead time, not just accuracy</li>
+          <li>Schedule retraining and monitor the alert rate for drift</li>
+        </ul>
+
+        <p>Start small: one asset class, a handful of sensors, a weekly review of the top-scored windows with the people who run the machines. Their feedback will improve the model faster than any hyperparameter search.</p>
+
+        <h2 id="sources">Sources</h2>
+
+        <ul class="post-sources">
+          <li>Liu, Ting and Zhou, <a href="https://www.academia.edu/27129261/Isolation_Forest">Isolation Forest</a>, IEEE ICDM 2008</li>
+          <li><a href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html">scikit-learn IsolationForest documentation</a>, version 1.9.1</li>
+          <li>Hariri, Carrasco Kind and Brunner, <a href="https://arxiv.org/abs/1811.02141">Extended Isolation Forest</a></li>
+          <li>Carletti, Terzi and Susto, <a href="https://arxiv.org/abs/2007.11117v2">DIFFI: Depth-based Isolation Forest Feature Importance</a></li>
+          <li><a href="https://arxiv.org/pdf/2405.01158v4">ExIFFI evaluated on industrial datasets</a></li>
+          <li><a href="https://ria.ua.pt/bitstream/10773/41334/1/1-s2.0-S1877050922023808-main.pdf">Predictive maintenance of injection moulds at OLI</a>, Procedia Computer Science 2022</li>
+          <li>McKinnon et al., <a href="https://mdpi.com/1996-1073/14/20/6601">Isolation forest for wind turbine pitch system condition monitoring</a>, Energies 2021</li>
+          <li>McKinnon et al., <a href="https://doi.org/10.3390/en13195152">Anomaly detection for wind turbine gearbox SCADA data</a>, Energies 2020</li>
+          <li>Puggini and McLoone, <a href="https://eld.bl.uk/catalog/100053848837_0x000001">Isolation forest for anomaly detection with OES data</a>, 2018</li>
+          <li>Chang, Yoo and Baek, <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8200057/">Anomaly detection in the semiconductor diffusion process</a>, Sensors 2021</li>
+          <li><a href="https://ieomsociety.org/proceedings/brazil2025/75.pdf">Smart maintenance of slat conveyors in the automotive industry</a>, IEOM 2025</li>
+          <li><a href="https://arxiv.org/pdf/2603.20335">Hybrid autoencoder and isolation forest for the C70XP cyclotron</a></li>
+          <li>LinkedIn Engineering, <a href="https://engineering.linkedin.com/blog/2019/isolation-forest">Detecting and preventing abuse using isolation forests</a>, 2019</li>
+          <li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/rcf_how-it-works.html">How Random Cut Forest works</a>, Amazon SageMaker documentation</li>
+        </ul>
+      </div>
+      <aside class="post-note" aria-label="How this post was written">
+        <p><strong>A note on how this was written.</strong> I write these posts while learning about a topic, as part of my own research. The diagrams were made with AI tools, and parts of the text were drafted with AI assistance. Sources are linked throughout so you can check the details for yourself.</p>
+      </aside>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span>© <span data-year>2026</span> Tribhuwan Pandey, Uppsala</span>
+      <ul>
+        <li><a href="https://github.com/triphysics">GitHub</a></li>
+        <li><a href="https://www.linkedin.com/in/tribhuwan-pandey/">LinkedIn</a></li>
+        <li><a href="https://scholar.google.co.in/citations?user=xVojRaYAAAAJ&amp;hl=en">Google Scholar</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script src="../assets/site.js"></script>
+</body>
+</html>

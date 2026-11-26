@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How RAG is changing scientific research | Tribhuwan Pandey</title>
+  <meta name="description" content="What retrieval-augmented generation (RAG) is, how it works under the hood, and six examples of RAG in scientific research, from PaperQA2 to ChatClimate.">
+  <meta name="author" content="Tribhuwan Pandey">
+  <meta property="og:title" content="How RAG is changing scientific research">
+  <meta property="og:description" content="A plain-language explainer of retrieval-augmented generation, with diagrams and six real examples from biology, medicine, chemistry, materials science, climate science and astronomy.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://triphysics.github.io/posts/rag-in-scientific-research.html">
+  <meta property="og:image" content="https://triphysics.github.io/assets/og-image.jpg">
+  <meta property="article:published_time" content="2026-11-26">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://triphysics.github.io/posts/rag-in-scientific-research.html">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "How RAG is changing scientific research",
+    "datePublished": "2026-11-26",
+    "author": { "@type": "Person", "name": "Tribhuwan Pandey", "url": "https://triphysics.github.io/" },
+    "mainEntityOfPage": "https://triphysics.github.io/posts/rag-in-scientific-research.html"
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../index.html">Tribhuwan Pandey</a>
+      <button class="nav-toggle" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav class="site-nav" id="site-nav" aria-label="Main">
+        <ul>
+          <li><a href="../index.html">Home</a></li>
+          <li><a href="../projects.html">Projects</a></li>
+          <li><a href="../experience.html">Experience</a></li>
+          <li><a href="../publications.html">Publications</a></li>
+          <li><a href="../research.html">Research</a></li>
+          <li><a href="../posts.html" aria-current="page">Posts</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <article class="wrap post">
+      <p class="post-back"><a href="../posts.html">← All posts</a></p>
+
+      <header class="post-header">
+        <h1>How RAG is changing scientific research</h1>
+        <p class="post-meta">Tribhuwan Pandey · <time datetime="2026-11-26">26 November 2026</time> · 12 min read</p>
+      </header>
+
+      <div class="post-body">
+        <p class="lede">Ask a large language model a hard question about protein folding or battery chemistry and you will get a fluent, confident answer. Whether that answer is <em>true</em> is another matter. Language models write from memory, their memory stops at a training cutoff, and when they don't know something they sometimes invent it, citations included.</p>
+
+        <p>That is a serious problem for science, where every claim needs to trace back to evidence. Retrieval-augmented generation, or RAG, is the most widely used fix. Instead of asking a model to remember the literature, RAG lets it look things up first and then answer from what it found. This post explains how RAG works and walks through where researchers are already using it.</p>
+
+        <nav class="post-toc" aria-label="Contents">
+          <p>Contents</p>
+          <ol>
+            <li><a href="#what-is-rag">What is RAG?</a></li>
+            <li><a href="#under-the-hood">Under the hood: how a RAG system is built</a></li>
+            <li><a href="#why-science">Why RAG fits science so well</a></li>
+            <li><a href="#examples">RAG in the lab: six examples</a></li>
+            <li><a href="#limits">What RAG doesn't fix</a></li>
+            <li><a href="#heading">Where this is heading</a></li>
+          </ol>
+        </nav>
+
+        <h2 id="what-is-rag">What is RAG?</h2>
+
+        <p>RAG pairs a language model with a search engine. The term comes from a 2020 paper by Patrick Lewis and colleagues at Facebook AI Research, University College London and New York University (<a href="https://arxiv.org/abs/2005.11401">Lewis et al., NeurIPS 2020</a>). They described models that combine two kinds of memory: <em>parametric</em> memory, the knowledge baked into the model's weights during training, and <em>non-parametric</em> memory, an external index of documents the model can search at answer time. In the original work, that external memory was a vector index of Wikipedia.</p>
+
+        <p>The idea is simple enough to explain with an analogy. A model without RAG is a student sitting a closed-book exam. A model with RAG is the same student in an open-book exam: it still needs to understand the material, but it can check the textbook before writing an answer, and it can point to the page it used.</p>
+
+        <p>In practice, a RAG system runs in three steps:</p>
+
+        <ol>
+          <li><strong>Retrieve.</strong> The user's question is turned into a search query. A <em>retriever</em> looks through a knowledge base (papers, databases, lab notebooks) and returns the most relevant passages. Many retrievers use <em>embeddings</em>, numerical fingerprints of meaning, so that a question about "heart attack risk" can match a paper that says "myocardial infarction." Others use classic keyword search, and the best systems often combine both.</li>
+          <li><strong>Augment.</strong> The retrieved passages are pasted into the model's prompt alongside the question, with an instruction to answer only from that evidence.</li>
+          <li><strong>Generate.</strong> The model writes its answer, ideally citing which passage supports each claim.</li>
+        </ol>
+
+        <figure class="post-figure">
+          <svg xmlns="http://www.w3.org/2000/svg" font-family="Schibsted Grotesk, Helvetica Neue, Arial, sans-serif" viewBox="0 0 760 296" role="img" aria-label="RAG looks up evidence before the model answers" font-size="13"><defs><marker id="rag-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9aa3b5"></path></marker></defs><text x="24" y="34" font-size="15" font-weight="600" fill="#18213a">RAG looks up evidence before the model answers</text><g fill="none" stroke="#9aa3b5" stroke-width="1.25"><path d="M144 124H172" marker-end="url(#rag-arrow)"></path><path d="M292 124H320" marker-end="url(#rag-arrow)"></path><path d="M440 124H468" marker-end="url(#rag-arrow)"></path><path d="M588 124H616" marker-end="url(#rag-arrow)"></path><path d="M232 160V216" marker-start="url(#rag-arrow)" marker-end="url(#rag-arrow)"></path></g><text x="232" y="76" text-anchor="middle" font-size="11.5" font-weight="600" fill="#5a6377">1. Retrieve</text><text x="380" y="76" text-anchor="middle" font-size="11.5" font-weight="600" fill="#5a6377">2. Augment</text><text x="528" y="76" text-anchor="middle" font-size="11.5" font-weight="600" fill="#5a6377">3. Generate</text><g><rect x="24" y="88" width="120" height="72" rx="8" fill="none" fill-opacity="1" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="84" y="112" text-anchor="middle" font-weight="600" fill="#18213a">Question</text><text x="84" y="128" text-anchor="middle" font-size="11.5" fill="#5a6377">researcher asks</text></g><g><rect x="172" y="88" width="120" height="72" rx="8" fill="none" fill-opacity="1" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="232" y="112" text-anchor="middle" font-weight="600" fill="#18213a">Retriever</text><text x="232" y="128" text-anchor="middle" font-size="11.5" fill="#5a6377">finds relevant</text><text x="232" y="144" text-anchor="middle" font-size="11.5" fill="#5a6377">passages</text></g><g><rect x="320" y="88" width="120" height="72" rx="8" fill="none" fill-opacity="1" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="380" y="112" text-anchor="middle" font-weight="600" fill="#18213a">Prompt</text><text x="380" y="128" text-anchor="middle" font-size="11.5" fill="#5a6377">question +</text><text x="380" y="144" text-anchor="middle" font-size="11.5" fill="#5a6377">passages</text></g><g><rect x="468" y="88" width="120" height="72" rx="8" fill="none" fill-opacity="1" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="528" y="112" text-anchor="middle" font-weight="600" fill="#18213a">Language model</text><text x="528" y="128" text-anchor="middle" font-size="11.5" fill="#5a6377">writes from</text><text x="528" y="144" text-anchor="middle" font-size="11.5" fill="#5a6377">the evidence</text></g><g><rect x="616" y="88" width="120" height="72" rx="8" fill="#2b4fb8" fill-opacity="0.12" stroke="#2b4fb8" stroke-width="2"></rect><text x="676" y="112" text-anchor="middle" font-weight="600" fill="#18213a">Answer</text><text x="676" y="128" text-anchor="middle" font-size="11.5" fill="#18213a">with citations</text></g><g><rect x="132" y="216" width="200" height="56" rx="8" fill="#eef1f6" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="232" y="240" text-anchor="middle" font-weight="600" fill="#18213a">Knowledge base</text><text x="232" y="256" text-anchor="middle" font-size="11.5" fill="#5a6377">papers, databases, notes</text></g><text x="242" y="192" font-size="11.5" fill="#5a6377">search</text></svg>
+          <figcaption>The RAG pipeline. The model never answers from memory alone: every response is built on passages pulled from the knowledge base first.</figcaption>
+        </figure>
+
+        <p>The knowledge base can be swapped or updated at any time without retraining the model. That one property is a large part of why RAG has become so popular in research settings.</p>
+
+        <h2 id="under-the-hood">Under the hood: how a RAG system is built</h2>
+
+        <p>The three-step picture above is the short version. Real systems add more machinery, and a surprising amount of it runs before anyone asks a question. Here is what happens at each stage.</p>
+
+        <h3 id="indexing">Step zero: building the index</h3>
+
+        <p>A retriever can only search what has been prepared for it. So the first job is to turn a pile of papers into something searchable. This happens once, offline, and is topped up as new papers come in.</p>
+
+        <ol>
+          <li><strong>Collect</strong> the sources: papers, database records, protocols, lab notebooks.</li>
+          <li><strong>Parse</strong> them. PDFs are messy, so the text, tables and figure captions have to be pulled out and the page headers and reference lists cleaned away.</li>
+          <li><strong>Chunk</strong> the text into passages of a few hundred words. A whole paper is too big to paste into a prompt, and a single sentence loses its context. Chunks often overlap slightly so an idea isn't cut in half at a boundary.</li>
+          <li><strong>Embed</strong> each chunk. An <em>embedding model</em> reads the passage and outputs a vector: a long list of numbers that captures what the passage means.</li>
+          <li><strong>Store</strong> the vectors, the original text and the metadata together in a <em>vector database</em>.</li>
+        </ol>
+
+        <figure class="post-figure">
+          <svg xmlns="http://www.w3.org/2000/svg" font-family="Schibsted Grotesk, Helvetica Neue, Arial, sans-serif" viewBox="0 0 760 296" role="img" aria-label="Papers become searchable vectors before any question is asked" font-size="13"><defs><marker id="idx-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9aa3b5"></path></marker></defs><text x="24" y="32" font-size="15" font-weight="600" fill="#18213a">Papers become searchable vectors before any question is asked</text><text x="24" y="54" font-size="11.5" fill="#5a6377">Done once, offline, and refreshed as new papers arrive</text><g fill="none" stroke="#9aa3b5" stroke-width="1.25"><path d="M148 132H171" marker-end="url(#idx-arrow)"></path><path d="M295 132H318" marker-end="url(#idx-arrow)"></path><path d="M442 132H465" marker-end="url(#idx-arrow)"></path><path d="M589 132H612" marker-end="url(#idx-arrow)"></path><path d="M380 176V216" stroke-dasharray="4 4"></path></g><g><rect x="24" y="88" width="124" height="88" rx="8" fill="none" fill-opacity="1" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="86" y="112" text-anchor="middle" font-weight="600" fill="#18213a">Sources</text><text x="86" y="128" text-anchor="middle" font-size="11.5" fill="#5a6377">PDFs, databases,</text><text x="86" y="144" text-anchor="middle" font-size="11.5" fill="#5a6377">lab notes</text></g><g><rect x="171" y="88" width="124" height="88" rx="8" fill="none" fill-opacity="1" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="233" y="112" text-anchor="middle" font-weight="600" fill="#18213a">Parse</text><text x="233" y="128" text-anchor="middle" font-size="11.5" fill="#5a6377">pull out text,</text><text x="233" y="144" text-anchor="middle" font-size="11.5" fill="#5a6377">tables, captions</text></g><g><rect x="318" y="88" width="124" height="88" rx="8" fill="none" fill-opacity="1" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="380" y="112" text-anchor="middle" font-weight="600" fill="#18213a">Chunk</text><text x="380" y="128" text-anchor="middle" font-size="11.5" fill="#5a6377">split into short</text><text x="380" y="144" text-anchor="middle" font-size="11.5" fill="#5a6377">passages</text></g><g><rect x="465" y="88" width="124" height="88" rx="8" fill="none" fill-opacity="1" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="527" y="112" text-anchor="middle" font-weight="600" fill="#18213a">Embed</text><text x="527" y="128" text-anchor="middle" font-size="11.5" fill="#5a6377">turn each chunk</text><text x="527" y="144" text-anchor="middle" font-size="11.5" fill="#5a6377">into a vector</text></g><g><rect x="612" y="88" width="124" height="88" rx="8" fill="#2b4fb8" fill-opacity="0.12" stroke="#2b4fb8" stroke-width="2"></rect><text x="674" y="112" text-anchor="middle" font-weight="600" fill="#18213a">Vector store</text><text x="674" y="128" text-anchor="middle" font-size="11.5" fill="#18213a">vectors + text</text><text x="674" y="144" text-anchor="middle" font-size="11.5" fill="#18213a">+ metadata</text></g><g><rect x="264" y="216" width="232" height="56" rx="8" fill="#eef1f6" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="380" y="240" text-anchor="middle" font-size="11.5" font-weight="600" fill="#18213a">Each chunk keeps its source:</text><text x="380" y="256" text-anchor="middle" font-size="11.5" fill="#5a6377">title, authors, year, DOI, section</text></g></svg>
+          <figcaption>Indexing: from raw papers to a searchable store.</figcaption>
+        </figure>
+
+        <p>That metadata matters more in science than almost anywhere else. It is what lets the final answer say <em>which</em> paper a claim came from, filter out anything older than a given year, or skip retracted work.</p>
+
+        <h3 id="embeddings">How embeddings find the right passage</h3>
+
+        <p>The clever part of modern retrieval is the embedding. An embedding model is trained so that passages with similar meanings end up as vectors pointing in similar directions. Think of every chunk as a point on a map of meaning. Papers on heart disease cluster in one region, cell biology in another, materials science somewhere else.</p>
+
+        <p>When a question arrives, it is embedded with the same model and dropped onto the same map. The retriever then returns the chunks closest to it. Because closeness tracks meaning rather than spelling, a question about "heart attack risk" can land right next to a passage that only ever says "myocardial infarction."</p>
+
+        <figure class="post-figure">
+          <svg xmlns="http://www.w3.org/2000/svg" font-family="Schibsted Grotesk, Helvetica Neue, Arial, sans-serif" viewBox="0 0 760 344" role="img" aria-label="Similar meanings sit close together, so search becomes geometry" font-size="13"><text x="24" y="32" font-size="15" font-weight="600" fill="#18213a">Similar meanings sit close together, so search becomes geometry</text><g><rect x="24" y="56" width="480" height="264" rx="8" fill="none" stroke="#d6dbe4" stroke-width="1.25"></rect><text x="40" y="308" font-size="11.5" fill="#5a6377">2-D sketch: real embeddings have hundreds or thousands of dimensions</text></g><g><circle cx="140" cy="130" r="5" fill="none" stroke="#9aa3b5" stroke-width="1.25"></circle><circle cx="165" cy="160" r="5" fill="#2b4fb8" stroke="#2b4fb8" stroke-width="1.25"></circle><circle cx="190" cy="140" r="5" fill="#2b4fb8" stroke="#2b4fb8" stroke-width="1.25"></circle><circle cx="150" cy="180" r="5" fill="none" stroke="#9aa3b5" stroke-width="1.25"></circle><circle cx="198" cy="176" r="5" fill="#2b4fb8" stroke="#2b4fb8" stroke-width="1.25"></circle><text x="128" y="162" text-anchor="end" font-size="11.5" fill="#5a6377">cardiology</text></g><g><circle cx="400" cy="100" r="5" fill="none" stroke="#9aa3b5" stroke-width="1.25"></circle><circle cx="440" cy="94" r="5" fill="none" stroke="#9aa3b5" stroke-width="1.25"></circle><circle cx="420" cy="128" r="5" fill="none" stroke="#9aa3b5" stroke-width="1.25"></circle><circle cx="458" cy="120" r="5" fill="none" stroke="#9aa3b5" stroke-width="1.25"></circle><text x="430" y="80" text-anchor="middle" font-size="11.5" fill="#5a6377">cell biology</text></g><g><circle cx="360" cy="262" r="5" fill="none" stroke="#9aa3b5" stroke-width="1.25"></circle><circle cx="400" cy="276" r="5" fill="none" stroke="#9aa3b5" stroke-width="1.25"></circle><circle cx="425" cy="246" r="5" fill="none" stroke="#9aa3b5" stroke-width="1.25"></circle><circle cx="380" cy="290" r="5" fill="none" stroke="#9aa3b5" stroke-width="1.25"></circle><text x="346" y="266" text-anchor="end" font-size="11.5" fill="#5a6377">materials science</text></g><g><circle cx="215" cy="155" r="60" fill="#2b4fb8" fill-opacity="0.06" stroke="#2b4fb8" stroke-width="1.25" stroke-dasharray="4 4"></circle><path d="M215 146L224 155L215 164L206 155z" fill="#2b4fb8"></path><text x="284" y="148" font-weight="600" fill="#18213a">Question:</text><text x="284" y="164" font-size="11.5" fill="#18213a">“heart attack risk?”</text><text x="215" y="238" text-anchor="middle" font-size="11.5" fill="#18213a">nearest: “myocardial infarction”</text></g><g><text x="528" y="96" font-weight="600" fill="#18213a">1  Embed the question</text><text x="528" y="114" font-size="11.5" fill="#5a6377">with the same model used</text><text x="528" y="130" font-size="11.5" fill="#5a6377">for the papers</text></g><g><text x="528" y="176" font-weight="600" fill="#18213a">2  Find the nearest vectors</text><text x="528" y="194" font-size="11.5" fill="#5a6377">closer in space means</text><text x="528" y="210" font-size="11.5" fill="#5a6377">closer in meaning</text></g><g><text x="528" y="256" font-weight="600" fill="#18213a">3  Return the top-k chunks</text><text x="528" y="274" font-size="11.5" fill="#5a6377">their text is pasted</text><text x="528" y="290" font-size="11.5" fill="#5a6377">into the prompt</text></g></svg>
+          <figcaption>Vector search: finding passages by meaning rather than by matching words.</figcaption>
+        </figure>
+
+        <p>"Closest" is usually measured with <em>cosine similarity</em>, which compares the angle between two vectors. For a question vector <i>q</i> and a chunk vector <i>d</i>:</p>
+
+        <div class="post-math">
+          <math display="block">
+            <mrow>
+              <mtext>similarity</mtext><mo stretchy="false">(</mo><mi>q</mi><mo>,</mo><mi>d</mi><mo stretchy="false">)</mo><mo>=</mo>
+              <mfrac>
+                <mrow><mi>q</mi><mo>·</mo><mi>d</mi></mrow>
+                <mrow><mo>‖</mo><mi>q</mi><mo>‖</mo><mspace width="0.2em"/><mo>‖</mo><mi>d</mi><mo>‖</mo></mrow>
+              </mfrac>
+            </mrow>
+          </math>
+        </div>
+
+        <p>A score near 1 means the two point the same way (very similar meaning); a score near 0 means they are unrelated. Comparing a question against millions of chunks one by one would be slow, so vector databases use <em>approximate nearest-neighbour</em> indexes that find the top matches in milliseconds while checking only a small fraction of the collection.</p>
+
+        <h3 id="hybrid">Hybrid search and reranking</h3>
+
+        <p>Embeddings are great at meaning but can be surprisingly sloppy with exact identifiers. To an embedding model, <em>BRCA1</em> and <em>BRCA2</em> look almost identical, yet to a geneticist they are different genes. The same goes for compound IDs, protein accession numbers and catalogue codes.</p>
+
+        <p>Old-fashioned keyword search handles these well. The standard algorithm, BM25, scores passages by how often the query's exact words appear, giving extra weight to rare words. So many scientific RAG systems run <em>both</em> searches and merge the results, a setup called <strong>hybrid retrieval</strong>.</p>
+
+        <p>The merged list is then passed to a <strong>reranker</strong>. Where the first search compares pre-computed vectors, a reranker reads the question and each candidate passage together and judges how well they actually match. That is too slow to run over millions of chunks, but cheap enough for a shortlist. Only the top few passages go on to the language model.</p>
+
+        <figure class="post-figure">
+          <svg xmlns="http://www.w3.org/2000/svg" font-family="Schibsted Grotesk, Helvetica Neue, Arial, sans-serif" viewBox="0 0 760 536" role="img" aria-label="Two searches catch what either alone would miss" font-size="13"><defs><marker id="hyb-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9aa3b5"></path></marker></defs><text x="24" y="32" font-size="15" font-weight="600" fill="#18213a">Two searches catch what either alone would miss</text><g fill="none" stroke="#9aa3b5" stroke-width="1.25"><path d="M380 112V128H230V144" marker-end="url(#hyb-arrow)"></path><path d="M380 128H530V144" marker-end="url(#hyb-arrow)"></path><path d="M230 232V252H380V272" marker-end="url(#hyb-arrow)"></path><path d="M530 232V252H380"></path><path d="M380 328V360" marker-end="url(#hyb-arrow)"></path><path d="M380 432V464" marker-end="url(#hyb-arrow)"></path></g><g><rect x="250" y="64" width="260" height="48" rx="8" fill="none" fill-opacity="1" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="380" y="93" text-anchor="middle" font-weight="600" fill="#18213a">Question</text></g><g><rect x="100" y="144" width="260" height="88" rx="8" fill="none" fill-opacity="1" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="230" y="168" text-anchor="middle" font-weight="600" fill="#18213a">Keyword search (BM25)</text><text x="230" y="184" text-anchor="middle" font-size="11.5" fill="#5a6377">matches exact terms:</text><text x="230" y="200" text-anchor="middle" font-size="11.5" fill="#5a6377">gene names, compound IDs,</text><text x="230" y="216" text-anchor="middle" font-size="11.5" fill="#5a6377">accession numbers</text></g><g><rect x="400" y="144" width="260" height="88" rx="8" fill="none" fill-opacity="1" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="530" y="168" text-anchor="middle" font-weight="600" fill="#18213a">Vector search (embeddings)</text><text x="530" y="184" text-anchor="middle" font-size="11.5" fill="#5a6377">matches meaning:</text><text x="530" y="200" text-anchor="middle" font-size="11.5" fill="#5a6377">finds “heart attack” when</text><text x="530" y="216" text-anchor="middle" font-size="11.5" fill="#5a6377">the paper says “infarction”</text></g><g><rect x="250" y="272" width="260" height="56" rx="8" fill="none" fill-opacity="1" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="380" y="296" text-anchor="middle" font-weight="600" fill="#18213a">Merge the two lists</text><text x="380" y="312" text-anchor="middle" font-size="11.5" fill="#5a6377">passages found by both rise to the top</text></g><g><rect x="250" y="360" width="260" height="72" rx="8" fill="none" fill-opacity="1" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="380" y="384" text-anchor="middle" font-weight="600" fill="#18213a">Rerank</text><text x="380" y="400" text-anchor="middle" font-size="11.5" fill="#5a6377">a slower, sharper model reads</text><text x="380" y="416" text-anchor="middle" font-size="11.5" fill="#5a6377">the question and each passage</text></g><g><rect x="250" y="464" width="260" height="48" rx="8" fill="#2b4fb8" fill-opacity="0.12" stroke="#2b4fb8" stroke-width="2"></rect><text x="380" y="493" text-anchor="middle" font-weight="600" fill="#18213a">Best few passages go to the prompt</text></g><g><text x="528" y="304" font-size="11.5" fill="#5a6377">long list, rough order</text><text x="528" y="400" font-size="11.5" fill="#5a6377">every candidate re-scored</text><text x="528" y="492" font-size="11.5" fill="#5a6377">short list, best first</text></g></svg>
+          <figcaption>Hybrid retrieval and reranking.</figcaption>
+        </figure>
+
+        <p>The medical MIRAGE study backs this up. Across 41 combinations of corpora, retrievers and models, the best single retrievers were classic BM25 and MedCPT, a retriever trained on PubMed search logs, and combining several retrievers did better still (<a href="https://arxiv.org/abs/2402.13178">Xiong et al.</a>).</p>
+
+        <h3 id="agentic">Beyond one-shot retrieval: agentic RAG</h3>
+
+        <p>Basic RAG searches once and answers with whatever comes back. That works for simple lookups, but real research questions rarely resolve in a single search. A good scientist reads a few papers, notices a term they hadn't thought of, follows a citation and searches again.</p>
+
+        <p><strong>Agentic RAG</strong> gives the language model that same freedom. Instead of a fixed pipeline, the model is handed a set of tools and decides for itself how to use them. It writes a query, reads what comes back, judges whether the evidence is good enough, and if not, refines the query and goes round again.</p>
+
+        <figure class="post-figure">
+          <svg xmlns="http://www.w3.org/2000/svg" font-family="Schibsted Grotesk, Helvetica Neue, Arial, sans-serif" viewBox="0 0 760 416" role="img" aria-label="An agent keeps searching until the evidence is good enough" font-size="13"><defs><marker id="agent-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9aa3b5"></path></marker></defs><text x="24" y="32" font-size="15" font-weight="600" fill="#18213a">An agent keeps searching until the evidence is good enough</text><text x="24" y="54" font-size="11.5" fill="#5a6377">The language model decides what to search, when to dig deeper and when to stop</text><g fill="none" stroke="#9aa3b5" stroke-width="1.25"><path d="M172 132H212" marker-end="url(#agent-arrow)"></path><path d="M360 132H400" marker-end="url(#agent-arrow)"></path><path d="M548 132H588" marker-end="url(#agent-arrow)"></path><path d="M662 176V216" marker-end="url(#agent-arrow)"></path><path d="M590 260H286V176" marker-end="url(#agent-arrow)"></path><path d="M662 304V344" marker-end="url(#agent-arrow)"></path></g><g><rect x="24" y="88" width="148" height="88" rx="8" fill="none" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="98" y="112" text-anchor="middle" font-weight="600" fill="#18213a">Question</text><text x="98" y="128" text-anchor="middle" font-size="11.5" fill="#5a6377">researcher asks</text></g><g><rect x="212" y="88" width="148" height="88" rx="8" fill="none" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="286" y="112" text-anchor="middle" font-weight="600" fill="#18213a">Write a query</text><text x="286" y="128" text-anchor="middle" font-size="11.5" fill="#5a6377">the model picks</text><text x="286" y="144" text-anchor="middle" font-size="11.5" fill="#5a6377">search terms</text></g><g><rect x="400" y="88" width="148" height="88" rx="8" fill="none" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="474" y="112" text-anchor="middle" font-weight="600" fill="#18213a">Search</text><text x="474" y="128" text-anchor="middle" font-size="11.5" fill="#5a6377">paper search,</text><text x="474" y="144" text-anchor="middle" font-size="11.5" fill="#5a6377">citation graph,</text><text x="474" y="160" text-anchor="middle" font-size="11.5" fill="#5a6377">databases</text></g><g><rect x="588" y="88" width="148" height="88" rx="8" fill="none" stroke="#9aa3b5" stroke-width="1.25"></rect><text x="662" y="112" text-anchor="middle" font-weight="600" fill="#18213a">Read &amp; extract</text><text x="662" y="128" text-anchor="middle" font-size="11.5" fill="#5a6377">note what each</text><text x="662" y="144" text-anchor="middle" font-size="11.5" fill="#5a6377">passage says about</text><text x="662" y="160" text-anchor="middle" font-size="11.5" fill="#5a6377">the question</text></g><g><polygon points="590,260 662,216 734,260 662,304" fill="none" stroke="#9aa3b5" stroke-width="1.25"></polygon><text x="662" y="256" text-anchor="middle" font-weight="600" fill="#18213a">Enough</text><text x="662" y="272" text-anchor="middle" font-weight="600" fill="#18213a">evidence?</text></g><text x="438" y="250" text-anchor="middle" font-size="11.5" fill="#5a6377">no: search again with a refined query</text><text x="672" y="330" font-size="11.5" fill="#5a6377">yes</text><g><rect x="536" y="344" width="200" height="48" rx="8" fill="#2b4fb8" fill-opacity="0.12" stroke="#2b4fb8" stroke-width="2"></rect><text x="636" y="373" text-anchor="middle" font-weight="600" fill="#18213a">Answer with citations</text></g></svg>
+          <figcaption>Agentic RAG: search, read, judge, repeat.</figcaption>
+        </figure>
+
+        <p>PaperQA2 is built this way. Its tools let it find papers, extract useful information from them, explore the citation graph and formulate an answer (<a href="https://futurehouse.org/news/wikicrow">FutureHouse</a>). When the team tested which design choices mattered most for accuracy, an agentic approach that could iteratively expand its queries was near the top of the list (<a href="https://www.futurehouse.org/research/engineering-blog-journey-to-superhuman-performance-on-scientific-tasks">FutureHouse engineering blog</a>).</p>
+
+        <p>The loop also gives the system a natural way to be honest. If several rounds of searching still turn up thin evidence, a well-designed agent can say so rather than guess.</p>
+
+        <h2 id="why-science">Why RAG fits science so well</h2>
+
+        <p>Science has almost every problem RAG was designed to solve:</p>
+
+        <ul>
+          <li><strong>Hallucination is costly.</strong> A made-up reference or a wrong binding affinity can send a lab down a dead end for months. Grounding answers in retrieved text gives the model something real to stand on.</li>
+          <li><strong>Claims need provenance.</strong> Researchers don't just want an answer; they want to know which paper it came from. RAG answers can carry citations a reader can check.</li>
+          <li><strong>The literature moves fast.</strong> Millions of papers are published every year, and a model's training data is frozen at its cutoff. A retrieval index can be refreshed daily.</li>
+          <li><strong>Much of the valuable data is private.</strong> Unpublished results, internal assay data and lab notebooks will never be in a public model's training set. RAG lets a lab point a model at its own documents without retraining anything.</li>
+          <li><strong>Domains are specialised.</strong> Chemistry, genomics and materials science have their own vocabularies and databases. The retriever can be tuned to them even when the underlying model is general-purpose.</li>
+        </ul>
+
+        <p>The Lewis paper flagged two of these issues directly: providing provenance for a model's decisions and updating its world knowledge were, in their words, open research problems that retrieval could help address.</p>
+
+        <h2 id="examples">RAG in the lab: six examples</h2>
+
+        <p>RAG has spread from computer science into nearly every data-heavy field. Here are six systems that show the range, from literature search to running experiments.</p>
+
+        <h3>1. Biology literature: PaperQA2</h3>
+
+        <p><a href="https://arxiv.org/abs/2409.13740">PaperQA2</a>, built by the nonprofit FutureHouse, is probably the best-known scientific RAG system. It is an <em>agent</em>: rather than running one search, it decides for itself when to search for papers, pull evidence from them, follow the citation graph and write an answer. On LitQA2, a benchmark of 248 hard multiple-choice questions that require finding specific facts in the biology literature, the team reported that PaperQA2 matched or beat PhD students and postdocs who had full internet access.</p>
+
+        <p>The same system powers WikiCrow, which writes cited, Wikipedia-style summaries of scientific topics. Blinded PhD and postdoc biologists judged them more accurate on average than the human-written Wikipedia articles. An earlier version had already generated articles for all 20,000 human genes by drawing on about one million papers (<a href="https://www.futurehouse.org/paperqa">FutureHouse</a>). The team also used it to hunt for contradictions between published findings, a task almost no human has time to do at scale.</p>
+
+        <h3>2. Medicine: Almanac and MedRAG</h3>
+
+        <p>In clinical medicine, a wrong answer can hurt a patient, so grounding matters even more. Stanford researchers built <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10857783">Almanac</a>, a RAG system that retrieves from curated medical resources to answer questions about guidelines and treatment. A panel of eight board-certified clinicians and two other healthcare practitioners evaluated it, and the work was published in <em>NEJM AI</em> in 2024. Almanac gave correct, trustworthy citations for 91% of its clinical questions (<a href="https://hai.stanford.edu/sites/default/files/2024-06/%28Cyril%20Zakka%29%20-%20HAI.pdf">Stanford HAI summary</a>).</p>
+
+        <p>Researchers at the US National Library of Medicine and the University of Virginia asked a broader question: which RAG choices actually work in medicine? Their <a href="https://arxiv.org/abs/2402.13178">MIRAGE benchmark</a> contains 7,663 questions from five medical QA datasets, and their open-source MedRAG toolkit tests combinations of corpora, retrievers and models. Retrieval improved the accuracy of six different models by up to 18% over standard step-by-step prompting.</p>
+
+        <h3>3. Chemistry: Coscientist and ChemRAG</h3>
+
+        <p><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10733136">Coscientist</a>, from Gabe Gomes's group at Carnegie Mellon and published in <em>Nature</em> in December 2023, shows retrieval moving from answering questions to running experiments. The system searched the web and read hardware documentation, then used that documentation to write code that drove automated lab equipment. Among its tasks, it successfully optimised palladium-catalysed cross-coupling reactions, the Nobel-winning chemistry used throughout drug development.</p>
+
+        <p>For more everyday chemistry questions, a University of Illinois team released <a href="https://arxiv.org/abs/2505.07671">ChemRAG-Bench</a>, with a retrieval corpus drawn from scientific papers, the PubChem database, PubMed abstracts, textbooks and Wikipedia. One of their findings: different chemistry tasks benefit from different sources, so there is no single best knowledge base.</p>
+
+        <h3>4. Materials science: LLaMP</h3>
+
+        <p><a href="https://arxiv.org/abs/2401.17244">LLaMP</a>, from UC Berkeley and Lawrence Berkeley National Laboratory, connects a language model to the Materials Project, a large open database of computed and experimental materials properties. Instead of retrieving text, its agents fetch structured data such as crystal structures and elastic tensors, and they can even launch atomistic simulations. The authors describe it as a nearly hallucination-free way to explore materials data, and it requires no fine-tuning of the underlying model.</p>
+
+        <h3>5. Climate science: ChatClimate</h3>
+
+        <p><a href="https://doi.org/10.1038/s43247-023-01084-x">ChatClimate</a> gave GPT-4 access to the IPCC's Sixth Assessment Report, the most comprehensive review of climate science available. The team compared three setups: GPT-4 alone, GPT-4 answering only from the IPCC reports, and a hybrid of the two. IPCC authors scored the answers, and the hybrid version came out most accurate. It is a good example of RAG over a single, highly trusted source.</p>
+
+        <h3>6. Astronomy: pathfinder</h3>
+
+        <p><a href="https://arxiv.org/abs/2408.01556">pathfinder</a>, built by an international team of astronomers and published in <em>The Astrophysical Journal Supplement Series</em>, runs RAG over about 350,000 peer-reviewed papers from NASA's Astrophysics Data System. It tackles problems specific to the field: dense jargon, named objects, and the fact that older results are often superseded. To handle that last one, it weights retrieved papers by recency and citation count. You can try it at <a href="https://pfdr.app">pfdr.app</a>.</p>
+
+        <h2 id="limits">What RAG doesn't fix</h2>
+
+        <p>RAG reduces hallucination; it does not eliminate it. A few problems keep coming up:</p>
+
+        <ul>
+          <li><strong>Garbage in, garbage out.</strong> The answer is only as good as the passages retrieved. If the retriever misses the key paper, or surfaces a retracted or superseded one, the model will confidently build on the wrong evidence. Even the PaperQA2 team found that finding the right paper, not writing the answer, was the hard part.</li>
+          <li><strong>Paywalls and formats.</strong> Much of the literature sits behind subscriptions, and much of the useful content lives in figures, tables and supplementary files that text-only retrieval handles poorly.</li>
+          <li><strong>No one-size-fits-all recipe.</strong> Benchmarks such as MIRAGE and ChemRAG-Bench exist precisely because the best mix of corpus, retriever and model varies by field and by task. A setup that works for clinical guidelines may not work for reaction prediction.</li>
+          <li><strong>Evaluation is hard.</strong> Judging whether a technical answer is right often takes a domain expert. A 2026 study in <a href="https://pubs.rsc.org/en/content/articlepdf/2026/ra/d5ra09726f"><em>RSC Advances</em></a> on materials-science RAG found that some popular automated evaluation methods, including using an LLM as a judge, failed to detect the benefit of retrieval at all.</li>
+          <li><strong>Citations can create false confidence.</strong> An answer with footnotes looks authoritative. But a cited passage doesn't always say what the model claims it says, so readers still need to check the sources.</li>
+        </ul>
+
+        <h2 id="heading">Where this is heading</h2>
+
+        <p>The examples above trace a clear arc. Early systems retrieved a few passages and answered a question. Newer ones, like PaperQA2, LLaMP and Coscientist, are agents: they decide what to look up, query databases and documentation as well as papers, and in some cases act on what they find in a real lab.</p>
+
+        <p>That shift makes RAG less a feature and more a foundation. Whatever form AI "co-scientists" eventually take, they will need to read the literature, cite their evidence and stay current. Retrieval is how they do it.</p>
+
+        <p>For working researchers, the practical takeaway is simple. Treat a RAG system like a fast, well-read research assistant: excellent for getting oriented and finding sources, but not a substitute for reading the papers it cites.</p>
+
+        <h2 id="sources">Sources</h2>
+
+        <ul class="post-sources">
+          <li>Lewis et al., <a href="https://arxiv.org/abs/2005.11401">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a>, NeurIPS 2020</li>
+          <li>Skarlinski et al., <a href="https://arxiv.org/abs/2409.13740">Language agents achieve superhuman synthesis of scientific knowledge</a> (PaperQA2), 2024</li>
+          <li>FutureHouse, <a href="https://www.futurehouse.org/paperqa">PaperQA2: Superhuman scientific literature search</a>, 2024</li>
+          <li>FutureHouse, <a href="https://www.futurehouse.org/research/engineering-blog-journey-to-superhuman-performance-on-scientific-tasks">Engineering blog: Journey to superhuman performance on scientific tasks</a>, 2024</li>
+          <li>Zakka et al., <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10857783">Almanac: Retrieval-Augmented Language Models for Clinical Medicine</a>, NEJM AI 2024</li>
+          <li>Xiong et al., <a href="https://arxiv.org/abs/2402.13178">Benchmarking Retrieval-Augmented Generation for Medicine</a> (MIRAGE / MedRAG), 2024</li>
+          <li>Boiko et al., <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10733136">Autonomous chemical research with large language models</a> (Coscientist), Nature 2023</li>
+          <li>Zhong et al., <a href="https://arxiv.org/abs/2505.07671">Benchmarking Retrieval-Augmented Generation for Chemistry</a> (ChemRAG-Bench), 2025</li>
+          <li>Chiang et al., <a href="https://arxiv.org/abs/2401.17244">LLaMP</a>, 2024</li>
+          <li>Vaghefi et al., <a href="https://doi.org/10.1038/s43247-023-01084-x">ChatClimate: Grounding conversational AI in climate science</a>, Communications Earth &amp; Environment 2023</li>
+          <li>Iyer et al., <a href="https://arxiv.org/abs/2408.01556">pathfinder: A Semantic Framework for Literature Review and Knowledge Discovery in Astronomy</a>, ApJS 2024</li>
+          <li><a href="https://pubs.rsc.org/en/content/articlepdf/2026/ra/d5ra09726f">Evaluating RAG in materials science</a>, RSC Advances 2026</li>
+        </ul>
+      </div>
+      <aside class="post-note" aria-label="How this post was written">
+        <p><strong>A note on how this was written.</strong> I write these posts while learning about a topic, as part of my own research. The diagrams were made with AI tools, and parts of the text were drafted with AI assistance. Sources are linked throughout so you can check the details for yourself.</p>
+      </aside>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span>© <span data-year>2026</span> Tribhuwan Pandey, Uppsala</span>
+      <ul>
+        <li><a href="https://github.com/triphysics">GitHub</a></li>
+        <li><a href="https://www.linkedin.com/in/tribhuwan-pandey/">LinkedIn</a></li>
+        <li><a href="https://scholar.google.co.in/citations?user=xVojRaYAAAAJ&amp;hl=en">Google Scholar</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script src="../assets/site.js"></script>
+</body>
+</html>
